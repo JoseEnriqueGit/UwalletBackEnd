@@ -1,0 +1,25 @@
+{
+  "name": "uwalletbackend",
+  "version": "0.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "type": "module",
+  "keywords": [],
+  "author": "J.Enrique.Git",
+  "license": "ISC",
+  "scripts": {
+    "dev": "nodemon src",
+    "start": "node src/index.js"
+  },
+  "devDependencies": {
+    "tslint": "^5.12.1",
+    "typescript": "^3.3.3"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.16.4",
+    "http-errors": "^2.0.0",
+    "nodemon": "^2.0.22"
+  }
+}
