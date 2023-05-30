@@ -1,36 +1,21 @@
-import mysql from "mysql";
+import mysql from "mysql2/promise";
 import { config } from "dotenv";
 
 config();
 
-const connection = mysql.createConnection(process.env.DATABASE_URL || "");
-
 class Database {
-	private retryTime = 2000;
-
-	public handleDisconnect(): void {
-		connection.connect((error) => {
-			if (error) {
-				console.error("Error connecting to the database:", error);
-				setTimeout(() => this.handleDisconnect(), this.retryTime);
-				this.retryTime *= 2;
-			} else {
-				console.log("Connected to the MySQL database.");
-				this.retryTime = 2000;
-			}
-		});
-
-		connection.on("error", (error) => {
-			if (error.code === "PROTOCOL_CONNECTION_LOST") {
-				this.handleDisconnect();
-			} else {
-				throw error;
-			}
-		});
-	}
+  private pool: mysql.Pool;
+  
+  constructor() {
+    this.pool = mysql.createPool(process.env.DATABASE_URL!);
+  }
+  
+  public getConnection(): Promise<mysql.PoolConnection> {
+    return this.pool.getConnection();
+  }
 }
 
 const db = new Database();
-db.handleDisconnect();
 
-export default connection;
+export default db;
+
