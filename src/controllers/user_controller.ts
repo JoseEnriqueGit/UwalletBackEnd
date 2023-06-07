@@ -29,7 +29,7 @@ export const getUserById = async (req: Request, res: Response) => {
 export const createUser = async (req: Request, res: Response) => {
   try {
     const connection = await db.getConnection();
-    const [rows] = await connection.query('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [req.body.name, req.body.email, req.body.password]);
+    const [rows] = await connection.query('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)', [req.body.id, req.body.name, req.body.email, req.body.password]);
     connection.release();
     res.json(rows);
   } catch (err) {
