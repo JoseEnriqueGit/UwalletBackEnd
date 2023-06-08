@@ -30,9 +30,9 @@ export const getUserById = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
 	try {
-		const userId = req.body.data.object.id;
-		const email = req.body.data.object.email_address;
-		const username = req.body.data.object.username;
+		const userId = req.body.data.id;
+		const email = req.body.data.email_addresses[0].email_address;
+		const username = req.body.data.username;
 
 		const connection = await db.getConnection();
 		const [rows] = await connection.query(
