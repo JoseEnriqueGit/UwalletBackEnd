@@ -36,7 +36,7 @@ export const createUser = async (req: Request, res: Response) => {
 
 		const connection = await db.getConnection();
 		const [rows] = await connection.query(
-			"INSERT INTO users (id, username, email, password) VALUES (?, ?, ?)",
+			"INSERT INTO users (id, username, email) VALUES (?, ?, ?)",
 			[userId, username, email]
 		);
 		connection.release();
