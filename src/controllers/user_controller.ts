@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import db from "../config/data_base";
-import { log } from "console";
 
 export const getAllUsers = async (_req: Request, res: Response) => {
 	try {
@@ -35,9 +34,15 @@ export const createUser = async (req: Request, res: Response) => {
 		const username = req.body.data.username;
 
 		const connection = await db.getConnection();
-		const [rows] = await connection.query(
+		// Firt insert the user in the users table
+		let [rows] = await connection.query(
 			"INSERT INTO users (id, username, email) VALUES (?, ?, ?)",
 			[userId, username, email]
+		);
+		// Then start the user history with a 0 balance
+		[rows] = await connection.query(
+			"INSERT INTO user_history (user_id, datetime_utc, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)",
+			[userId, "income", 0, 0, "Start using", "UNDEFINED"]
 		);
 		connection.release();
 		res.json(rows);
@@ -76,21 +81,6 @@ export const deleteUser = async (req: Request, res: Response) => {
 	}
 };
 
-export const login = async (req: Request, res: Response) => {
-	try {
-		const connection = await db.getConnection();
-		const [rows] = await connection.query(
-			"SELECT * FROM users WHERE email = ? AND password = ?",
-			[req.body.email, req.body.password]
-		);
-		connection.release();
-		res.json(rows);
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: "Internal server error" });
-	}
-};
-
 export const getUserByEmail = async (req: Request, res: Response) => {
 	try {
 		const connection = await db.getConnection();
@@ -106,45 +96,12 @@ export const getUserByEmail = async (req: Request, res: Response) => {
 	}
 };
 
-export const getUserByEmailAndPassword = async (
-	req: Request,
-	res: Response
-) => {
-	try {
-		const connection = await db.getConnection();
-		const [rows] = await connection.query(
-			"SELECT * FROM users WHERE email = ? AND password = ?",
-			[req.params.email, req.params.password]
-		);
-		connection.release();
-		res.json(rows);
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: "Internal server error" });
-	}
-};
-
 export const getUserByName = async (req: Request, res: Response) => {
 	try {
 		const connection = await db.getConnection();
 		const [rows] = await connection.query(
 			"SELECT * FROM users WHERE name = ?",
 			[req.params.name]
-		);
-		connection.release();
-		res.json(rows);
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: "Internal server error" });
-	}
-};
-
-export const getUserByNameAndPassword = async (req: Request, res: Response) => {
-	try {
-		const connection = await db.getConnection();
-		const [rows] = await connection.query(
-			"SELECT * FROM users WHERE name = ? AND password = ?",
-			[req.params.name, req.params.password]
 		);
 		connection.release();
 		res.json(rows);
