@@ -28,6 +28,8 @@ export const getUserById = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
+	/** In this code, a new user is inserted into the "users" table,
+	* and their history is initiated in the "user_history" table with an initial balance of 0. */
 	try {
 		const userId = req.body.data.id;
 		const email = req.body.data.email_addresses[0].email_address;
