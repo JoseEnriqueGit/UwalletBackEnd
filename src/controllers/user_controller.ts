@@ -54,6 +54,21 @@ export const createUser = async (req: Request, res: Response) => {
 	}
 };
 
+export const getUserBalance = async (req: Request, res: Response) => {
+	try {
+		const connection = await db.getConnection();
+		const [rows] = await connection.query(
+			"SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ?",
+			[req.params.id]
+		);
+		connection.release();
+		res.json(rows);
+	} catch (err) {
+		console.error(err);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
 export const updateUser = async (req: Request, res: Response) => {
 	try {
 		const connection = await db.getConnection();
