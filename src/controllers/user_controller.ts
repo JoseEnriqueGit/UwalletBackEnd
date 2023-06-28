@@ -29,9 +29,9 @@ export const getUserById = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
 	/** In this code, a new user is inserted into the "users" table,
-	* and their history is initiated in the "user_history" table with an initial balance of 0. */
+	 * and their history is initiated in the "user_history" table with an initial balance of 0. */
 	try {
-		const userId = req.body.data.id;
+		const user_id = req.body.data.id;
 		const email = req.body.data.email_addresses[0].email_address;
 		const username = req.body.data.username;
 
@@ -39,12 +39,12 @@ export const createUser = async (req: Request, res: Response) => {
 		// Firt insert the user in the users table
 		let [rows] = await connection.query(
 			"INSERT INTO users (id, username, email) VALUES (?, ?, ?)",
-			[userId, username, email]
+			[user_id, username, email]
 		);
 		// Then start the user history with a 0 balance
 		[rows] = await connection.query(
-			"INSERT INTO user_history (user_id, datetime_utc, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)",
-			[userId, "income", 0, 0, "Start using", "UNDEFINED"]
+			"INSERT INTO user_history (user_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			[user_id, "income", 0, 0, "Start using", "UNDEFINED"]
 		);
 		connection.release();
 		res.json(rows);
