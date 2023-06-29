@@ -85,15 +85,37 @@ export const updateUser = async (req: Request, res: Response) => {
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
+	const connection = await db.getConnection();
 	try {
-		const connection = await db.getConnection();
+		// Start a transaction
+		await connection.beginTransaction();
+
+		// Delete records from the user_history table
+		await connection.query("DELETE FROM user_history WHERE user_id = ?", [
+			req.params.id,
+		]);
+
+		// Delete records from the user_wishes table
+		await connection.query("DELETE FROM user_wishes WHERE user_id = ?", [
+			req.params.id,
+		]);
+
+		// Delete user from the users table
 		const [rows] = await connection.query("DELETE FROM users WHERE id = ?", [
 			req.params.id,
 		]);
+
+		// Commit the transaction
+		await connection.commit();
+
 		connection.release();
 		res.json(rows);
 	} catch (err) {
 		console.error(err);
+
+		// Rollback the transaction in case of an error
+		await connection.rollback();
+
 		res.status(500).json({ error: "Internal server error" });
 	}
 };
