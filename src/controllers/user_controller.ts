@@ -47,7 +47,7 @@ export const createUser = async (req: Request, res: Response) => {
 
 		// Start the user history with a 0 balance
 		await connection.query(
-			"INSERT INTO user_history (user_id, datetime_utc, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			"INSERT INTO user_history (user_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
 			[
 				user_id,
 				getCurrentDateTimeInDominicanRepublic(),
