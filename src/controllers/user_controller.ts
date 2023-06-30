@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import db from "../config/data_base";
+// Utils
+import getCurrentDateTimeInDominicanRepublic from "../utils/getCurrentDateTime";
 
 export const getAllUsers = async (_req: Request, res: Response) => {
 	try {
@@ -44,7 +46,7 @@ export const createUser = async (req: Request, res: Response) => {
 		// Then start the user history with a 0 balance
 		[rows] = await connection.query(
 			"INSERT INTO user_history (user_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			[user_id, "income", 0, 0, "Start using", "UNDEFINED"]
+			[user_id, getCurrentDateTimeInDominicanRepublic(), "income", 0, 0, "Start using", "UNDEFINED"]
 		);
 		connection.release();
 		res.json(rows);
