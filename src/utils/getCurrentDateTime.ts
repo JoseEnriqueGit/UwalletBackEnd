@@ -6,6 +6,5 @@ function getCurrentDateTimeInDominicanRepublic(): string {
 		.format("YYYY-MM-DD HH:mm:ss");
 	return currentDateTime;
 }
-console.log(getCurrentDateTimeInDominicanRepublic());
 
 export default getCurrentDateTimeInDominicanRepublic;
