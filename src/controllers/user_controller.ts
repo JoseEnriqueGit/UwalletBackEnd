@@ -30,28 +30,46 @@ export const getUserById = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
-	/** In this code, a new user is inserted into the "users" table,
-	 * and their history is initiated in the "user_history" table with an initial balance of 0. */
+	const connection = await db.getConnection();
 	try {
 		const user_id = req.body.data.id;
 		const email = req.body.data.email_addresses[0].email_address;
 		const username = req.body.data.username;
 
-		const connection = await db.getConnection();
-		// Firt insert the user in the users table
+		// Start a transaction
+		await connection.beginTransaction();
+
+		// Insert the user in the users table
 		let [rows] = await connection.query(
 			"INSERT INTO users (id, username, email) VALUES (?, ?, ?)",
 			[user_id, username, email]
 		);
-		// Then start the user history with a 0 balance
-		[rows] = await connection.query(
-			"INSERT INTO user_history (user_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			[user_id, getCurrentDateTimeInDominicanRepublic(), "income", 0, 0, "Start using", "UNDEFINED"]
+
+		// Start the user history with a 0 balance
+		await connection.query(
+			"INSERT INTO user_history (user_id, datetime_utc, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			[
+				user_id,
+				getCurrentDateTimeInDominicanRepublic(),
+				"income",
+				0,
+				0,
+				"Start using",
+				"UNDEFINED",
+			]
 		);
+
+		// Commit the transaction
+		await connection.commit();
+
 		connection.release();
 		res.json(rows);
 	} catch (err) {
 		console.error(err);
+
+		// Rollback the transaction in case of an error
+		await connection.rollback();
+
 		res.status(500).json({ error: "Internal server error" });
 	}
 };
