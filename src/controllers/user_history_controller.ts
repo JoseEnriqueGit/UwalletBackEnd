@@ -19,7 +19,6 @@ export const getAllUserHistory = async (_req: Request, res: Response) => {
 export const addRecordToHistory = async (req: Request, res: Response) => {
 	try {
 		const connection = await db.getConnection();
-
 		// Get the current balance of the user
 		const [balanceRows] = (await connection.query(
 			"SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ?",
@@ -28,6 +27,16 @@ export const addRecordToHistory = async (req: Request, res: Response) => {
 
 		// Extract the balance from the query result
 		const currentBalance = balanceRows[0]?.balance || 0;
+
+		// Check if the transfer_type is 'spent' and if the amount exceeds the current balance
+		if (
+			req.body.transfer_type === "spent" &&
+			req.body.amount > currentBalance
+		) {
+			connection.release();
+			res.status(400).json({ error: "Insufficient funds" });
+			return;
+		}
 
 		// Insert the record in user_history with the calculated previous_balance
 		const [rows] = await connection.query(
