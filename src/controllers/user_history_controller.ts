@@ -40,7 +40,7 @@ export const addRecordToHistory = async (req: Request, res: Response) => {
 
 		// Insert the record in user_history with the calculated previous_balance
 		const [rows] = await connection.query(
-			"INSERT INTO user_history (user_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			"INSERT INTO user_history (user_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, 'UNDEFINED'))",
 			[
 				req.body.user_id,
 				getCurrentDateTimeInDominicanRepublic(),
