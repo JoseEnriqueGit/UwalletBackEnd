@@ -18,3 +18,23 @@ server.use(user_history_routes);
 server.listen(process.env.PORT, () => {
 	console.log(`Server started on port ${process.env.PORT}`);
 });
+
+
+var myHeaders = new Headers();
+myHeaders.append("apikey", "zMxsDr5iOs3MUYbZdHyWOBfPhfpmoYEu");
+
+var requestOptions: {
+	method: string;
+	redirect: RequestRedirect;
+	headers: Headers;
+} = {
+method: 'GET',
+redirect: 'follow',
+headers: myHeaders
+};
+
+
+fetch("https://api.apilayer.com/exchangerates_data/convert?to={to}&from={from}&amount={amount}", requestOptions)
+  .then(response => response.text())
+  .then(result => console.log(result))
+  .catch(error => console.log('error', error));
