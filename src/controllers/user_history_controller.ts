@@ -19,10 +19,25 @@ export const getAllUserHistory = async (_req: Request, res: Response) => {
 export const addRecordToHistory = async (req: Request, res: Response) => {
 	try {
 		const connection = await db.getConnection();
+
+		// Get the main wallet ID of the user from users_wallets table
+		const [mainWalletRow] = (await connection.query(
+			"SELECT id FROM users_wallets WHERE user_id = ? AND is_main_wallet = ?",
+			[req.body.user_id, true]
+		)) as RowDataPacket[];
+
+		if (!Array.isArray(mainWalletRow) || mainWalletRow.length === 0) {
+			connection.release();
+			res.status(404).json({ error: "Main wallet not found" });
+			return;
+		}
+
+		const mainWalletId = mainWalletRow[0].id;
+
 		// Get the current balance of the user
 		const [balanceRows] = (await connection.query(
-			"SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ?",
-			[req.body.user_id]
+			"SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ? AND wallet_id = ?",
+			[req.body.user_id, mainWalletId]
 		)) as RowDataPacket[];
 
 		// Extract the balance from the query result
@@ -38,11 +53,12 @@ export const addRecordToHistory = async (req: Request, res: Response) => {
 			return;
 		}
 
-		// Insert the record in user_history with the calculated previous_balance
+		// Insert the record in user_history with the calculated previous_balance and wallet_id
 		const [rows] = await connection.query(
-			"INSERT INTO user_history (user_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, 'UNDEFINED'))",
+			"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'UNDEFINED'))",
 			[
 				req.body.user_id,
+				mainWalletId,
 				getCurrentDateTimeInDominicanRepublic(),
 				req.body.transfer_type,
 				req.body.amount,
