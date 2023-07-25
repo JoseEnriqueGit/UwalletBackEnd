@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { RowDataPacket } from "mysql2";
 import db from "../config/data_base";
 // Utils
 import getCurrentDateTimeInDominicanRepublic from "../utils/getCurrentDateTime";
@@ -40,16 +41,31 @@ export const createUser = async (req: Request, res: Response) => {
 		await connection.beginTransaction();
 
 		// Insert the user in the users table
-		let [rows] = await connection.query(
+		await connection.query(
 			"INSERT INTO users (id, username, email) VALUES (?, ?, ?)",
 			[user_id, username, email]
 		);
 
-		// Start the user history with a 0 balance
+		// Insert the user's wallet in the users_wallets table
 		await connection.query(
-			"INSERT INTO user_history (user_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			"INSERT INTO users_wallets (user_id, is_main_wallet) VALUES (?, ?)",
+			[user_id, true]
+		);
+
+		// Get the wallet_id for the main wallet
+		const [walletRow] = (await connection.query(
+			"SELECT id FROM users_wallets WHERE user_id = ? AND is_main_wallet = ?",
+			[user_id, true]
+		)) as RowDataPacket[];
+
+		const wallet_id = walletRow[0].id;
+
+		// Start the user history with a 0 balance and the wallet_id
+		await connection.query(
+			"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 			[
 				user_id,
+				wallet_id,
 				getCurrentDateTimeInDominicanRepublic(),
 				"income",
 				0,
@@ -63,7 +79,7 @@ export const createUser = async (req: Request, res: Response) => {
 		await connection.commit();
 
 		connection.release();
-		res.json(rows);
+		res.json({ success: true });
 	} catch (err) {
 		console.error(err);
 
@@ -75,25 +91,25 @@ export const createUser = async (req: Request, res: Response) => {
 };
 
 export const getUserBalance = async (req: Request, res: Response) => {
-  try {
-    const connection = await db.getConnection();
-    const [rows] = await connection.query(
-      "SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ?",
-      [req.params.id]
-    );
-    connection.release();
+	try {
+		const connection = await db.getConnection();
+		const [rows] = await connection.query(
+			"SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ?",
+			[req.params.id]
+		);
+		connection.release();
 
-    if (Array.isArray(rows) && rows.length > 0) {
-      const balanceResult = rows[0] as { balance: number };
-      const balance = balanceResult.balance;
-      res.json(balance);
-    } else {
-      res.status(404).json({ error: "Balance not found" });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
-  }
+		if (Array.isArray(rows) && rows.length > 0) {
+			const balanceResult = rows[0] as { balance: number };
+			const balance = balanceResult.balance;
+			res.json(balance);
+		} else {
+			res.status(404).json({ error: "Balance not found" });
+		}
+	} catch (err) {
+		console.error(err);
+		res.status(500).json({ error: "Internal server error" });
+	}
 };
 
 export const updateUser = async (req: Request, res: Response) => {
