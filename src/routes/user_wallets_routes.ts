@@ -6,6 +6,6 @@ import {
 
 const router = Router();
 
-router.post("/wallets", createNewWallet);
+router.post("/v1/wallets", createNewWallet);
 
 export default router;

@@ -7,7 +7,7 @@ import {
 
 const router = Router();
 
-router.get("/user-history", getAllUserHistory);
-router.post("/user-history", addRecordToHistory);
+router.get("/v1/user-history", getAllUserHistory);
+router.post("/v1/user-history", addRecordToHistory);
 
 export default router;
