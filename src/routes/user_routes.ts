@@ -7,7 +7,7 @@ import {
 	deleteUser,
 } from "../controllers/user_controller";
 
-import { getUserWalletInformation } from "../controllers";
+import { getUserWalletInformation, switchWallet } from "../controllers";
 
 const router = Router();
 
@@ -17,5 +17,7 @@ router.post("/v1/users", createUser);
 router.delete("/v1/users/:id", deleteUser);
 
 router.get("/v1/users/wallet-information/:id", getUserWalletInformation);
+router.put("/v1/users/switchWallet/:user_id", switchWallet);
+
 
 export default router;
