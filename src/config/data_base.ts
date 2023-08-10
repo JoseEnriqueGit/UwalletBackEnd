@@ -1,16 +1,9 @@
-import mysql from "mysql2/promise";
 import { config } from "dotenv";
-import { createLogger, transports } from "winston";
-import { DatabaseError, TransactionError } from "./errors";
+import mysql from "mysql2/promise";
+import { DatabaseError, TransactionError } from "../errors";
+import logger from "./logger";
 
 config();
-
-const logger = createLogger({
-	transports: [
-		new transports.Console(),
-		new transports.File({ filename: "error.log", level: "error" }),
-	],
-});
 
 class Database {
 	private pool: mysql.Pool;
@@ -55,7 +48,7 @@ class Database {
 	public async close(): Promise<void> {
 		await this.pool.end();
 	}
-	// Delete this
+
 	public getConnection(): Promise<mysql.PoolConnection> {
 		return this.pool.getConnection();
 	}
