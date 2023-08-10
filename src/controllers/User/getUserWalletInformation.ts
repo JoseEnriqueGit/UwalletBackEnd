@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { RowDataPacket } from "mysql2";
 import db from "../../config/data_base";
-import logger from "../../config/logger";
 
 // Parametrized query with placeholders
 const GET_WALLETS_INFO_QUERY = `
