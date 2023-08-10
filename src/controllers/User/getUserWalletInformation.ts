@@ -1,22 +1,53 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { RowDataPacket } from "mysql2";
 import db from "../../config/data_base";
+import logger from "../../config/logger";
 
-const GET_WALLETS_INFO_QUERY =
-	"SELECT id, currency, is_main_wallet, is_second_wallet FROM users_wallets WHERE user_id = ?";
-const GET_MAIN_WALLET_BALANCE_QUERY =
-	"SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ? AND wallet_id = ?";
+// Parametrized query with placeholders
+const GET_WALLETS_INFO_QUERY = `
+    SELECT
+        uw.id,
+        uw.currency,
+        uw.is_main_wallet,
+        uw.is_second_wallet,
+        SUM(CASE WHEN uh.transfer_type = 'income' THEN uh.amount ELSE 0 END) - SUM(CASE WHEN uh.transfer_type = 'spent' THEN uh.amount ELSE 0 END) AS balance
+    FROM users_wallets uw
+    LEFT JOIN user_history uh ON uw.user_id = uh.user_id AND uw.id = uh.wallet_id
+    WHERE uw.user_id = ?
+    GROUP BY uw.id
+`;
 
-export const getUserWalletInformation = async (req: Request, res: Response) => {
-	const connection = await db.getConnection();
+interface WalletRow extends RowDataPacket {
+	id: number;
+	currency: string;
+	is_main_wallet: boolean;
+	is_second_wallet: boolean;
+	balance: number;
+}
+
+interface WalletResponse {
+	balance: number;
+	currency: string;
+	hasSecondWallet: boolean;
+	secondWalletCurrency: string;
+}
+
+export const getUserWalletInformation = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+) => {
 	try {
-		// Get the user's wallets info from users_wallets table
-		const [walletsRows] = await connection.execute<RowDataPacket[]>(
-			GET_WALLETS_INFO_QUERY,
-			[req.params.id]
-		);
+		const result = await db.transaction(async (connection) => {
+			const [walletsRows] = await connection.execute<WalletRow[]>(
+				GET_WALLETS_INFO_QUERY,
+				[req.params.id]
+			);
 
-		if (Array.isArray(walletsRows) && walletsRows.length > 0) {
+			if (!walletsRows || walletsRows.length === 0) {
+				return { message: "No wallets found" };
+			}
+
 			let mainWalletBalance = 0;
 			let hasSecondWallet = false;
 			let currency = "";
@@ -24,12 +55,7 @@ export const getUserWalletInformation = async (req: Request, res: Response) => {
 
 			for (const walletRow of walletsRows) {
 				if (walletRow.is_main_wallet) {
-					const mainWalletId = walletRow.id;
-					const [mainWalletRows] = await connection.execute<RowDataPacket[]>(
-						GET_MAIN_WALLET_BALANCE_QUERY,
-						[req.params.id, mainWalletId]
-					);
-					mainWalletBalance = mainWalletRows[0]?.balance || 0;
+					mainWalletBalance = walletRow.balance || 0;
 					currency = walletRow.currency;
 				}
 
@@ -39,26 +65,22 @@ export const getUserWalletInformation = async (req: Request, res: Response) => {
 				}
 			}
 
-			const response: {
-				balance: number;
-				currency: string;
-				hasSecondWallet: boolean;
-				secondWalletCurrency: string;
-			} = {
+			const response: WalletResponse = {
 				balance: mainWalletBalance,
-				currency: currency,
-				hasSecondWallet: hasSecondWallet,
-				secondWalletCurrency: secondWalletCurrency,
+				currency,
+				hasSecondWallet,
+				secondWalletCurrency,
 			};
 
-			res.json(response);
+			return response;
+		});
+
+		if (result) {
+			res.json(result);
 		} else {
-			res.status(404).json({ error: "Wallets not found" });
+			res.status(204).json({ message: "No wallets found" });
 		}
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: "Internal server error" });
-	} finally {
-		connection.release();
+	} catch (error) {
+		next(error);
 	}
 };
