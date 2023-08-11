@@ -16,10 +16,9 @@ router.get("/v1/users/:id", getUserById);
 router.post("/v1/users", createUser);
 router.delete("/v1/users/:id", deleteUser);
 
-
 router.get("/v1/users/:id/wallet-information", getUserWalletInformation);
 
-router.put("/v1/users/switchWallet/:user_id", switchWallet);
+router.patch("/v1/users/switchWallet/:user_id", switchWallet);
 
 router.get("/v1/users//wallet-information", (req, res) => {
 	res.status(400).json({ error: "Invalid user ID" });
