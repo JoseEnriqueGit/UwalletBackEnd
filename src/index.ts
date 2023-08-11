@@ -1,14 +1,14 @@
 // Lib
-import express from "express";
 import cors from "cors";
 import { config } from "dotenv";
+import express from "express";
 // Routes
+import { notFound } from "./middleware";
 import {
-	user_routes,
 	user_history_routes,
+	user_routes,
 	user_wallets_routes,
 } from "./routes";
-import { errorHandlerMiddleware, notFound } from "./middleware";
 
 config();
 
@@ -23,9 +23,7 @@ server.use(user_history_routes);
 server.use(user_wallets_routes);
 
 // middleware
-server.use(errorHandlerMiddleware);
 server.use(notFound);
-
 
 server.listen(process.env.PORT, () => {
 	console.log(`Server started on port ${process.env.PORT}`);
