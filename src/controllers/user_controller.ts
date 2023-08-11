@@ -6,9 +6,7 @@ import getCurrentDateTimeInDominicanRepublic from "../utils/getCurrentDateTime";
 
 export const getAllUsers = async (_req: Request, res: Response) => {
 	try {
-		const connection = await db.getConnection();
-		const [rows] = await connection.query("SELECT * FROM users");
-		connection.release();
+		const rows = await db.query("SELECT * FROM users");
 		res.json(rows);
 	} catch (err) {
 		console.error(err);
@@ -18,11 +16,9 @@ export const getAllUsers = async (_req: Request, res: Response) => {
 
 export const getUserById = async (req: Request, res: Response) => {
 	try {
-		const connection = await db.getConnection();
-		const [rows] = await connection.query("SELECT * FROM users WHERE id = ?", [
+		const rows = await db.query("SELECT * FROM users WHERE id = ?", [
 			req.params.id,
 		]);
-		connection.release();
 		res.json(rows);
 	} catch (err) {
 		console.error(err);
@@ -31,112 +27,45 @@ export const getUserById = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
-	const connection = await db.getConnection();
 	try {
 		const user_id = req.body.data.id;
 		const email = req.body.data.email_addresses[0].email_address;
 		const username = req.body.data.username;
 
-		// Start a transaction
-		await connection.beginTransaction();
-
-		// Insert the user in the users table
-		await connection.query(
-			"INSERT INTO users (id, username, email) VALUES (?, ?, ?)",
-			[user_id, username, email]
-		);
-
-		// Insert the user's wallet in the users_wallets table
-		await connection.query(
-			"INSERT INTO users_wallets (user_id, is_main_wallet) VALUES (?, ?)",
-			[user_id, true]
-		);
-
-		// Get the wallet_id for the main wallet
-		const [walletRow] = (await connection.query(
-			"SELECT id FROM users_wallets WHERE user_id = ? AND is_main_wallet = ?",
-			[user_id, true]
-		)) as RowDataPacket[];
-
-		const wallet_id = walletRow[0].id;
-
-		// Start the user history with a 0 balance and the wallet_id
-		await connection.query(
-			"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-			[
-				user_id,
-				wallet_id,
-				getCurrentDateTimeInDominicanRepublic(),
-				"income",
-				0,
-				0,
-				"Start using",
-				"UNDEFINED",
-			]
-		);
-
-		// Commit the transaction
-		await connection.commit();
-
-		connection.release();
-		res.json({ success: true });
-	} catch (err) {
-		console.error(err);
-
-		// Rollback the transaction in case of an error
-		await connection.rollback();
-
-		res.status(500).json({ error: "Internal server error" });
-	}
-};
-
-export const getUserBalance = async (req: Request, res: Response) => {
-	try {
-		const connection = await db.getConnection();
-
-		// Get the user's main wallet ID from users_wallets table
-		const [mainWalletRow] = await connection.query(
-			"SELECT id FROM users_wallets WHERE user_id = ? AND is_main_wallet = ?",
-			[req.params.id, true]
-		);
-
-		if (Array.isArray(mainWalletRow) && mainWalletRow.length > 0) {
-			const mainWalletId = (mainWalletRow[0] as RowDataPacket).id;
-
-			// Calculate balance only for user_history entries with the main wallet ID
-			const [rows] = await connection.query(
-				"SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ? AND wallet_id = ?",
-				[req.params.id, mainWalletId]
+		await db.transaction(async (conn) => {
+			await conn.query(
+				"INSERT INTO users (id, username, email) VALUES (?, ?, ?)",
+				[user_id, username, email]
 			);
 
-			connection.release();
+			await conn.query(
+				"INSERT INTO users_wallets (user_id, is_main_wallet) VALUES (?, ?)",
+				[user_id, true]
+			);
 
-			if (Array.isArray(rows) && rows.length > 0) {
-				const balanceResult = rows[0] as { balance: number };
-				const balance = balanceResult.balance;
-				res.json(balance);
-			} else {
-				res.status(404).json({ error: "Balance not found" });
-			}
-		} else {
-			connection.release();
-			res.status(404).json({ error: "Main wallet not found" });
-		}
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: "Internal server error" });
-	}
-};
+			const [walletRow] = (await conn.query(
+				"SELECT id FROM users_wallets WHERE user_id = ? AND is_main_wallet = ?",
+				[user_id, true]
+			)) as RowDataPacket[];
 
-export const updateUser = async (req: Request, res: Response) => {
-	try {
-		const connection = await db.getConnection();
-		const [rows] = await connection.query(
-			"UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?",
-			[req.body.name, req.body.email, req.body.password, req.params.id]
-		);
-		connection.release();
-		res.json(rows);
+			const wallet_id = walletRow[0]?.id;
+
+			await conn.query(
+				"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+				[
+					user_id,
+					wallet_id,
+					getCurrentDateTimeInDominicanRepublic(),
+					"income",
+					0,
+					0,
+					"Start using",
+					"UNDEFINED",
+				]
+			);
+		});
+
+		res.json({ success: true });
 	} catch (err) {
 		console.error(err);
 		res.status(500).json({ error: "Internal server error" });
@@ -144,65 +73,20 @@ export const updateUser = async (req: Request, res: Response) => {
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
-	const connection = await db.getConnection();
 	try {
-		// Start a transaction
-		await connection.beginTransaction();
+		await db.transaction(async (conn) => {
+			await conn.query("DELETE FROM user_history WHERE user_id = ?", [
+				req.params.id,
+			]);
+			await conn.query("DELETE FROM user_wishes WHERE user_id = ?", [
+				req.params.id,
+			]);
+			const [deleteRows] = await conn.query("DELETE FROM users WHERE id = ?", [
+				req.params.id,
+			]);
 
-		// Delete records from the user_history table
-		await connection.query("DELETE FROM user_history WHERE user_id = ?", [
-			req.params.id,
-		]);
-
-		// Delete records from the user_wishes table
-		await connection.query("DELETE FROM user_wishes WHERE user_id = ?", [
-			req.params.id,
-		]);
-
-		// Delete user from the users table
-		const [rows] = await connection.query("DELETE FROM users WHERE id = ?", [
-			req.params.id,
-		]);
-
-		// Commit the transaction
-		await connection.commit();
-
-		connection.release();
-		res.json(rows);
-	} catch (err) {
-		console.error(err);
-
-		// Rollback the transaction in case of an error
-		await connection.rollback();
-
-		res.status(500).json({ error: "Internal server error" });
-	}
-};
-
-export const getUserByEmail = async (req: Request, res: Response) => {
-	try {
-		const connection = await db.getConnection();
-		const [rows] = await connection.query(
-			"SELECT * FROM users WHERE email = ?",
-			[req.params.email]
-		);
-		connection.release();
-		res.json(rows);
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: "Internal server error" });
-	}
-};
-
-export const getUserByName = async (req: Request, res: Response) => {
-	try {
-		const connection = await db.getConnection();
-		const [rows] = await connection.query(
-			"SELECT * FROM users WHERE name = ?",
-			[req.params.name]
-		);
-		connection.release();
-		res.json(rows);
+			res.json(deleteRows);
+		});
 	} catch (err) {
 		console.error(err);
 		res.status(500).json({ error: "Internal server error" });
