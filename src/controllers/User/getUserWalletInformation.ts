@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { RowDataPacket } from "mysql2";
 import db from "../../config/data_base";
+import logger from "../../config/logger";
 
 // Parametrized query with placeholders
 const GET_WALLETS_INFO_QUERY = `
@@ -47,28 +48,18 @@ export const getUserWalletInformation = async (
 				return { message: "No wallets found" };
 			}
 
-			let mainWalletBalance = 0;
-			let hasSecondWallet = false;
-			let currency = "";
-			let secondWalletCurrency = "";
-
-			for (const walletRow of walletsRows) {
-				if (walletRow.is_main_wallet) {
-					mainWalletBalance = walletRow.balance || 0;
-					currency = walletRow.currency;
-				}
-
-				if (walletRow.is_second_wallet) {
-					hasSecondWallet = true;
-					secondWalletCurrency = walletRow.currency;
-				}
-			}
+			const mainWallet = walletsRows.find(
+				(walletRow) => walletRow.is_main_wallet
+			);
+			const secondWallet = walletsRows.find(
+				(walletRow) => walletRow.is_second_wallet
+			);
 
 			const response: WalletResponse = {
-				balance: mainWalletBalance,
-				currency,
-				hasSecondWallet,
-				secondWalletCurrency,
+				balance: mainWallet?.balance || 0,
+				currency: mainWallet?.currency || "",
+				hasSecondWallet: !!secondWallet,
+				secondWalletCurrency: secondWallet?.currency || "",
 			};
 
 			return response;
@@ -80,6 +71,11 @@ export const getUserWalletInformation = async (
 			res.status(204).json({ message: "No wallets found" });
 		}
 	} catch (error) {
-		next(error);
+		if (process.env.NODE_ENV === "development") {
+			logger.error("Error retrieving user wallet information", { error });
+		}
+		res.status(500).json({
+			message: "An error occurred while retrieving user wallet information",
+		});
 	}
 };
