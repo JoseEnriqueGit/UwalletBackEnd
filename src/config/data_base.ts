@@ -48,10 +48,6 @@ class Database {
 	public async close(): Promise<void> {
 		await this.pool.end();
 	}
-
-	public getConnection(): Promise<mysql.PoolConnection> {
-		return this.pool.getConnection();
-	}
 }
 
 const db = new Database();
