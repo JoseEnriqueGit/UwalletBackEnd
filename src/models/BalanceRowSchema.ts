@@ -4,9 +4,9 @@ import * as z from "zod";
 const BalanceRowSchema = z.object({
 	id: z.number(),
 	currency: z.string(),
-	is_main_wallet: z.boolean(),
-	is_second_wallet: z.boolean(),
-	balance: z.number(),
+	is_main_wallet: z.number().transform((value) => !!value),
+	is_second_wallet: z.number().transform((value) => !!value),
+	balance: z.string().transform(parseFloat),
 });
 
 export default BalanceRowSchema;
