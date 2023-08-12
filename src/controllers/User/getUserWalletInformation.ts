@@ -1,29 +1,8 @@
-import { Request, Response, NextFunction } from "express";
-import { RowDataPacket } from "mysql2";
+import { Request, Response } from "express";
 import db from "../../config/data_base";
 import logger from "../../config/logger";
-
-// Parametrized query with placeholders
-const GET_WALLETS_INFO_QUERY = `
-    SELECT
-        uw.id,
-        uw.currency,
-        uw.is_main_wallet,
-        uw.is_second_wallet,
-        SUM(CASE WHEN uh.transfer_type = 'income' THEN uh.amount ELSE 0 END) - SUM(CASE WHEN uh.transfer_type = 'spent' THEN uh.amount ELSE 0 END) AS balance
-    FROM users_wallets uw
-    LEFT JOIN user_history uh ON uw.user_id = uh.user_id AND uw.id = uh.wallet_id
-    WHERE uw.user_id = ?
-    GROUP BY uw.id
-`;
-
-interface WalletRow extends RowDataPacket {
-	id: number;
-	currency: string;
-	is_main_wallet: boolean;
-	is_second_wallet: boolean;
-	balance: number;
-}
+import { BalanceRowSchema } from "../../models";
+import { balanceInfo } from "../../db";
 
 interface WalletResponse {
 	balance: number;
@@ -35,23 +14,31 @@ interface WalletResponse {
 export const getUserWalletInformation = async (
 	req: Request,
 	res: Response,
-	next: NextFunction
 ) => {
 	try {
 		const result = await db.transaction(async (connection) => {
-			const [walletsRows] = await connection.execute<WalletRow[]>(
-				GET_WALLETS_INFO_QUERY,
-				[req.params.id]
-			);
+			const walletsRows = await balanceInfo(connection, req.params.id);
 
 			if (!walletsRows || walletsRows.length === 0) {
 				return { message: "No wallets found" };
 			}
 
-			const mainWallet = walletsRows.find(
+			// Convert types of fields before validating with zod
+			const validatedWalletsRows = walletsRows.map((row) => {
+				// Convert is_main_wallet and is_second_wallet fields to boolean
+				row.is_main_wallet = !!row.is_main_wallet;
+				row.is_second_wallet = !!row.is_second_wallet;
+
+				// Convert balance field to number
+				row.balance = Number(row.balance);
+
+				return BalanceRowSchema.parse(row);
+			});
+
+			const mainWallet = validatedWalletsRows.find(
 				(walletRow) => walletRow.is_main_wallet
 			);
-			const secondWallet = walletsRows.find(
+			const secondWallet = validatedWalletsRows.find(
 				(walletRow) => walletRow.is_second_wallet
 			);
 
@@ -71,9 +58,8 @@ export const getUserWalletInformation = async (
 			res.status(204).json({ message: "No wallets found" });
 		}
 	} catch (error) {
-		if (process.env.NODE_ENV === "development") {
-			logger.error("Error retrieving user wallet information", { error });
-		}
+		logger.error("Error retrieving user wallet information", { error });
+
 		res.status(500).json({
 			message: "An error occurred while retrieving user wallet information",
 		});
