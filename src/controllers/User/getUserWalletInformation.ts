@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import db from "../../config/data_base";
 import logger from "../../config/logger";
 import { BalanceRowSchema } from "../../models";
-import { balanceInfo } from "../../db";
+import { balanceInfoQueries } from "../../db";
 import { ZodError } from "zod";
 
 interface WalletResponse {
@@ -14,8 +14,8 @@ interface WalletResponse {
 
 export const getUserWalletInformation = async (req: Request, res: Response) => {
 	try {
-		const result = await db.transaction(async (connection) => {
-			const balanceInfoRows = await balanceInfo(connection, req.params.id);
+		const result = await db.transaction(async () => {
+			const balanceInfoRows = await balanceInfoQueries(req.params.id);
 
 			if (!balanceInfoRows || balanceInfoRows.length === 0) {
 				return { message: "No wallets found" };
@@ -27,7 +27,7 @@ export const getUserWalletInformation = async (req: Request, res: Response) => {
 					return result.data;
 				} else {
 					const validationErrors = result.error.issues;
-					logger.error("Error retrieving user wallet information", {
+					logger.error("Validation error: ", {
 						validationErrors,
 					});
 					throw new ZodError(validationErrors);

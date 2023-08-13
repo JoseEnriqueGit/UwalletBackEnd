@@ -1,1 +1,2 @@
-export * from './balanceInfo';
+export * from './balanceInfoQueries';
+export * from './switchWalletQueries';

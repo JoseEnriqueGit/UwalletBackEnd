@@ -1,4 +1,4 @@
-import { PoolConnection } from "mysql2/promise";
+import db from "../config/data_base";
 import { RowDataPacket } from "mysql2";
 
 // Parametrized query with placeholders
@@ -23,14 +23,8 @@ interface WalletRow extends RowDataPacket {
 	balance: number;
 }
 
-export const balanceInfo = async (
-	connection: PoolConnection,
-	userId: string
-): Promise<WalletRow[]> => {
-	const [walletsRows] = await connection.execute<WalletRow[]>(
-		GET_WALLETS_INFO_QUERY,
-		[userId]
-	);
+export const balanceInfoQueries = async (userId: string): Promise<WalletRow[]> => {
+	const walletsRows = await db.execute(GET_WALLETS_INFO_QUERY, [userId]);
 
 	return walletsRows;
 };
