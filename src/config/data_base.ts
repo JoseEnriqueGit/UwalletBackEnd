@@ -26,6 +26,20 @@ class Database {
 		}
 	}
 
+	public async execute(sql: string, values?: any): Promise<any> {
+		const conn = await this.pool.getConnection();
+		try {
+			const [rows] = await conn.execute(sql, values);
+			return rows;
+		} catch (err) {
+			const errorMessage = `Error executing query: ${sql}`;
+			logger.error(errorMessage, { error: err });
+			throw new DatabaseError(errorMessage, err as Error);
+		} finally {
+			conn.release();
+		}
+	}
+
 	public async transaction<T>(
 		callback: (conn: mysql.PoolConnection) => Promise<T>
 	): Promise<T> {
