@@ -6,7 +6,7 @@ import getCurrentDateTimeInDominicanRepublic from "../utils/getCurrentDateTime";
 
 export const getAllUsers = async (_req: Request, res: Response) => {
 	try {
-		const rows = await db.query("SELECT * FROM users");
+		const rows = await db.execute("SELECT * FROM users");
 		res.json(rows);
 	} catch (err) {
 		console.error(err);
@@ -16,7 +16,7 @@ export const getAllUsers = async (_req: Request, res: Response) => {
 
 export const getUserById = async (req: Request, res: Response) => {
 	try {
-		const rows = await db.query("SELECT * FROM users WHERE id = ?", [
+		const rows = await db.execute("SELECT * FROM users WHERE id = ?", [
 			req.params.id,
 		]);
 		res.json(rows);
@@ -32,25 +32,25 @@ export const createUser = async (req: Request, res: Response) => {
 		const email = req.body.data.email_addresses[0].email_address;
 		const username = req.body.data.username;
 
-		await db.transaction(async (conn) => {
-			await conn.query(
+		await db.transaction(async () => {
+			await db.execute(
 				"INSERT INTO users (id, username, email) VALUES (?, ?, ?)",
 				[user_id, username, email]
 			);
 
-			await conn.query(
+			await db.execute(
 				"INSERT INTO users_wallets (user_id, is_main_wallet) VALUES (?, ?)",
 				[user_id, true]
 			);
 
-			const [walletRow] = (await conn.query(
+			const [walletRow] = (await db.execute(
 				"SELECT id FROM users_wallets WHERE user_id = ? AND is_main_wallet = ?",
 				[user_id, true]
 			)) as RowDataPacket[];
 
 			const wallet_id = walletRow[0]?.id;
 
-			await conn.query(
+			await db.execute(
 				"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 				[
 					user_id,
@@ -74,14 +74,17 @@ export const createUser = async (req: Request, res: Response) => {
 
 export const deleteUser = async (req: Request, res: Response) => {
 	try {
-		await db.transaction(async (conn) => {
-			await conn.query("DELETE FROM user_history WHERE user_id = ?", [
+		await db.transaction(async () => {
+			await db.execute("DELETE FROM user_history WHERE user_id = ?", [
 				req.params.id,
 			]);
-			await conn.query("DELETE FROM user_wishes WHERE user_id = ?", [
+			await db.execute("DELETE FROM user_wishes WHERE user_id = ?", [
 				req.params.id,
 			]);
-			const [deleteRows] = await conn.query("DELETE FROM users WHERE id = ?", [
+			await db.execute("DELETE FROM users_wallets WHERE user_id = ?", [
+				req.params.id,
+			]);
+			const [deleteRows] = await db.execute("DELETE FROM users WHERE id = ?", [
 				req.params.id,
 			]);
 

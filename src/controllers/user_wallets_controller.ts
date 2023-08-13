@@ -18,9 +18,9 @@ export const createNewWallet = async (req: Request, res: Response) => {
 	}
 
 	try {
-		await db.transaction(async (conn) => {
+		await db.transaction(async () => {
 			// Insert new wallet into users_wallets
-			const insertResult = await conn.query(
+			const insertResult = await db.execute(
 				"INSERT INTO users_wallets (user_id, currency, is_main_wallet, is_second_wallet) VALUES (?, ?, ?, ?)",
 				[user_id, currency, is_main_wallet, is_second_wallet]
 			);
@@ -28,7 +28,7 @@ export const createNewWallet = async (req: Request, res: Response) => {
 			const wallet_id = (insertResult[0] as ResultSetHeader).insertId;
 
 			// Insert record into user_history
-			await conn.query(
+			await db.execute(
 				"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, 'income', ?, 0, 'New wallet', 'UNDEFINED')",
 				[user_id, wallet_id, getCurrentDateTimeInDominicanRepublic(), amount]
 			);

@@ -6,7 +6,7 @@ import getCurrentDateTimeInDominicanRepublic from "../utils/getCurrentDateTime";
 
 export const getAllUserHistory = async (_req: Request, res: Response) => {
 	try {
-		const rows = await db.query("SELECT * FROM user_history");
+		const rows = await db.execute("SELECT * FROM user_history");
 		res.json(rows);
 	} catch (err) {
 		console.error(err);
@@ -16,7 +16,7 @@ export const getAllUserHistory = async (_req: Request, res: Response) => {
 
 export const addRecordToHistory = async (req: Request, res: Response) => {
 	try {
-		const mainWalletRow = (await db.query(
+		const mainWalletRow = (await db.execute(
 			"SELECT id FROM users_wallets WHERE user_id = ? AND is_main_wallet = ?",
 			[req.body.user_id, true]
 		)) as RowDataPacket[];
@@ -28,7 +28,7 @@ export const addRecordToHistory = async (req: Request, res: Response) => {
 
 		const mainWalletId = mainWalletRow[0]?.id;
 
-		const balanceRows = (await db.query(
+		const balanceRows = (await db.execute(
 			"SELECT SUM(CASE WHEN transfer_type = 'income' THEN amount ELSE 0 END) - SUM(CASE WHEN transfer_type = 'spent' THEN amount ELSE 0 END) AS balance FROM user_history WHERE user_id = ? AND wallet_id = ?",
 			[req.body.user_id, mainWalletId]
 		)) as RowDataPacket[];
@@ -43,7 +43,7 @@ export const addRecordToHistory = async (req: Request, res: Response) => {
 			return;
 		}
 
-		const rows = await db.query(
+		const rows = await db.execute(
 			"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'UNDEFINED'))",
 			[
 				req.body.user_id,
