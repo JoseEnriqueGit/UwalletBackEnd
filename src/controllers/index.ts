@@ -1,3 +1,4 @@
+export * from './ExchangeRates/storeCurrencyData';
 export * from './User/getUserWalletInformation';
 export * from './User/switchWallet';
 export * from './user_controller';
