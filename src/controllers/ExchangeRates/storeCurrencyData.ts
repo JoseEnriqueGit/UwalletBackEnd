@@ -1,7 +1,7 @@
 import db from "../../config/data_base";
 import fetch from "node-fetch";
 
-const API_KEY = "zMxsDr5iOs3MUYbZdHyWOBfPhfpmoYEu";
+const API_KEY = process.env.EXCHANGE_RATE_API_KEY;
 const API_URL =
 	"https://api.apilayer.com/exchangerates_data/latest?symbols=&base=USD";
 
@@ -15,9 +15,14 @@ async function fetchExchangeRatesData(): Promise<ExchangeRatesData> {
 	const response = await fetch(API_URL, {
 		method: "GET",
 		headers: {
-			apikey: API_KEY,
+			apikey: API_KEY || "",
 		},
 	});
+
+	if (!response.ok) {
+		throw new Error(`HTTP error: ${response.status}`);
+	}
+
 	return (await response.json()) as ExchangeRatesData;
 }
 

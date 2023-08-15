@@ -9,6 +9,7 @@ import {
 	user_routes,
 	user_wallets_routes,
 } from "./routes";
+import { scheduleExchangeRatesDataInsertion } from "./controllers";
 
 config();
 
@@ -24,6 +25,8 @@ server.use(user_wallets_routes);
 
 // middleware
 server.use(notFound);
+
+scheduleExchangeRatesDataInsertion(5, "days");
 
 server.listen(process.env.PORT, () => {
 	console.log(`Server started on port ${process.env.PORT}`);
