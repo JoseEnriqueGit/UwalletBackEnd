@@ -25,7 +25,7 @@ export const createNewWallet = async (req: Request, res: Response) => {
 				[user_id, currency, is_main_wallet, is_second_wallet]
 			);
 
-			const wallet_id = (insertResult[0] as ResultSetHeader).insertId;
+			const wallet_id = (insertResult.insertId);
 
 			// Insert record into user_history
 			await db.execute(
