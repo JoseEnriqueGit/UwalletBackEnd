@@ -5,9 +5,10 @@ import {
 	deleteUser,
 	getAllUsers,
 	getUserById,
-} from "../controllers/user_controller";
-
-import { getUserWalletInformation, switchWallet } from "../controllers";
+	getCurrencyRates,
+	getUserWalletInformation,
+	switchWallet,
+} from "../controllers";
 
 const router = Router();
 
@@ -18,7 +19,9 @@ router.delete("/v1/users/:id", deleteUser);
 
 router.get("/v1/users/:id/wallet-information", getUserWalletInformation);
 
-router.patch("/v1/users/switchWallet/:user_id", switchWallet);
+router.patch("/v1/users/:user_id/switchWallet", switchWallet);
+
+router.get("/v1/users/:user_id/get-currency-rates", getCurrencyRates);
 
 router.get("/v1/users//wallet-information", (req, res) => {
 	res.status(400).json({ error: "Invalid user ID" });
