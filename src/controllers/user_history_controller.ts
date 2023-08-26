@@ -39,12 +39,11 @@ export const addRecordToHistory = async (req: Request, res: Response) => {
 			req.body.transfer_type === "spent" &&
 			req.body.amount > currentBalance
 		) {
-			res.status(400).json({ error: "Insufficient funds" });
-			return;
+			return res.status(400).json({ error: "Insufficient funds" });
 		}
 
 		const rows = await db.execute(
-			"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'UNDEFINED'))",
+			"INSERT INTO user_history (user_id, wallet_id, creation_date, transfer_type, amount, previous_balance, description, expenses_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 			[
 				req.body.user_id,
 				mainWalletId,
@@ -52,8 +51,8 @@ export const addRecordToHistory = async (req: Request, res: Response) => {
 				req.body.transfer_type,
 				req.body.amount,
 				currentBalance,
-				req.body.description,
-				req.body.expenses_type,
+				req.body.description || null,
+				req.body.expenses_type || "UNDEFINED",
 			]
 		);
 
